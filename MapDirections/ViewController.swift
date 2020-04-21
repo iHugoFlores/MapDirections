@@ -54,6 +54,7 @@ class ViewController: UIViewController {
     }
     
     func setUpView() {
+        mapView.delegate = self
         view.backgroundColor = .white
         headerSView.addArrangedSubview(addressField)
         headerSView.addArrangedSubview(getDirectionsButton)
@@ -95,6 +96,7 @@ class ViewController: UIViewController {
                 return
             }
             print(location)
+            self.mapThis(destinationCord: location.coordinate)
         }
     }
 
@@ -103,6 +105,40 @@ class ViewController: UIViewController {
 extension ViewController: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         print(locations)
+    }
+    
+    func mapThis(destinationCord: CLLocationCoordinate2D) {
+        let sourceCoordinate = locationManager.location!.coordinate
+        let sourcePlaceMark = MKPlacemark(coordinate: sourceCoordinate)
+        let destPlaceMark = MKPlacemark(coordinate: destinationCord)
+        let sourceItem = MKMapItem(placemark: sourcePlaceMark)
+        let destItem = MKMapItem(placemark: destPlaceMark)
+        
+        let destinationRequest = MKDirections.Request()
+        destinationRequest.source = sourceItem
+        destinationRequest.destination = destItem
+        destinationRequest.transportType = .automobile
+        destinationRequest.requestsAlternateRoutes = true
+        
+        let directions = MKDirections(request: destinationRequest)
+        directions.calculate { [unowned self] (response, error) in
+            guard let response = response
+            else {
+                print("Something went wrong wih the directions")
+                return
+            }
+            let route = response.routes[0]
+            self.mapView.addOverlay(route.polyline)
+            self.mapView.setVisibleMapRect(route.polyline.boundingMapRect, animated: true)
+        }
+    }
+}
+
+extension ViewController: MKMapViewDelegate {
+    func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+        let render = MKPolylineRenderer(overlay: overlay as! MKPolyline)
+        render.strokeColor = .blue
+        return render
     }
 }
 
